@@ -8,6 +8,7 @@ from ortools.sat.python import cp_model
 from student import Student
 
 TOTAL_TREE_SPOTS = 25
+TREE_SIZE = 7
 FIELDS = ['ID','CLASS','CRN','TREE','BRANCH','COURSE_CEILING',
           'MAJOR','MAJOR2','SUBJ','NUMB','SEQ']
 
@@ -51,11 +52,33 @@ def read_file(filename):
                 s = Student(id, class_year)
                 s.add_request(crn, tree, branch)
                 student_requests[id] = s
+            
+            #For building student requests as arrays
+            tree_pos = get_tree_pos(tree,branch)
+            if id in student_pref: # does this student already exist?
+                #Add the course request in the correct tree pos
+                student_pref[id][tree_pos] = crn
+            else: # nope, create a new record
+                pref = [0]*25
+                student_pref[id]=pref
+                student_pref[id][tree_pos] = crn
 
             students_by_class[class_year].add(id)
             courses[crn] = int(row['COURSE_CEILING'])
             
-    return student_requests, students_by_class, courses
+    return student_requests, students_by_class, courses, student_pref
+
+def get_tree_pos(tree,branch):
+    """
+    Returns a position 0-24 based on the tree/brach combination.
+
+    Tree positions are numbered sequentially by starting at tree1 and traversing level-order
+    """
+    if tree<=3:
+        return (TREE_SIZE*(tree-1))+(branch-1)
+    else:
+        pass
+    return 0
 
 def main():
     if (len(sys.argv) != 2):
@@ -71,7 +94,9 @@ def main():
         return
     
     # Read in data
-    student_requests, students_by_class, courses = read_file(sys.argv[1])
+    student_requests, students_by_class, courses, student_pref = read_file(sys.argv[1])
+
+    print(student_pref[2])
     
     #May be used in process of building model (especially with for loops)
     num_courses = len(courses)
@@ -80,7 +105,9 @@ def main():
     num_jun = len(students_by_class['JUNI'])
     num_sen = len(students_by_class['SENI'])
     num_other = len(students_by_class['OTHER'])
+    num_class_years = 5
     all_tree_pos = range(TOTAL_TREE_SPOTS)
+    class_years = ['SENI', 'JUNI', 'SOPH', 'FRST', 'OTHER']
 
     # Creates the model.
     model = cp_model.CpModel()
@@ -90,9 +117,17 @@ def main():
     assignments = {}
 
     #TODO: NEED NESTED FOR LOOPS HERE: add all boolean variables for possible class assignments
-    #for each student
-        #for each class in that students tree
-            #assignments[(id,crn,yr,pos)] = model.NewBoolVar('assignment_id%icrn%iyr%spos%i' % (id,crn,yr,pos))
+    #For each class year
+    for yr in range(num_class_years):
+        students = students_by_class[class_years[yr]]
+        #For each student in that class year
+        for id in students: 
+            #For each of their tree slots
+            for pos in range(TOTAL_TREE_SPOTS):
+                crn = student_pref[id][pos]
+                #If they requested a class, make a boolean var
+                if crn != 0:
+                    assignments[(id,crn,yr,pos)] = model.NewBoolVar('assignment_id%icrn%iyr%ipos%i' % (id,crn,yr,pos))
 
     #TODO: Constraints:
     
@@ -122,24 +157,6 @@ def main():
     #     no 4b
     #     no 4c
     #     no 4d
-    
-    
-    
-    
-    
-    #This is being used in process of trying to print all of a students requests
-    student = student_requests[2]
-    print(student)
-    while (student.can_advance_preference()):
-        try:
-            requested_course = student.get_next_course()
-            print(requested_course)
-            student.advance_preference(False)
-        except KeyError: # student didn't fill in preference, continue
-            pass
-        
-        # No space (or student didn't specify this node), try next course
-        student.advance_preference(False)
 
 
 if __name__ == '__main__':
