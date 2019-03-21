@@ -31,6 +31,7 @@ def read_file(filename):
         students_by_class = {'SENI': set([]), 'JUNI': set([]),
                              'SOPH': set([]), 'FRST': set([]),
                              'OTHER': set([])}
+        class_by_student = {}
         courses = {}
         
         #TODO: May need to read in the students' requests differently
@@ -46,6 +47,8 @@ def read_file(filename):
             crn = int(row['CRN'])
             tree = int(row['TREE'])
             branch = int(row['BRANCH'])
+
+            class_by_student[id]=class_year
             if id in student_requests: # does this student already exist?
                 student_requests[id].add_request(crn, tree, branch)
             else: # nope, create a new record
@@ -66,7 +69,7 @@ def read_file(filename):
             students_by_class[class_year].add(id)
             courses[crn] = int(row['COURSE_CEILING'])
             
-    return student_requests, students_by_class, courses, student_pref
+    return student_requests, students_by_class,class_by_student, courses, student_pref
 
 def get_tree_pos(tree,branch):
     """
@@ -94,7 +97,7 @@ def main():
         return
     
     # Read in data
-    student_requests, students_by_class, courses, student_pref = read_file(sys.argv[1])
+    student_requests, students_by_class, class_by_student, courses, student_pref = read_file(sys.argv[1])
 
     print(student_pref[2])
     
@@ -127,16 +130,19 @@ def main():
                 crn = student_pref[id][pos]
                 #If they requested a class, make a boolean var
                 if crn != 0:
-                    assignments[(id,crn,yr,pos)] = model.NewBoolVar('assignment_id%icrn%iyr%ipos%i' % (id,crn,yr,pos))
+                    assignments[(id,crn,pos)] = model.NewBoolVar('assignment_id%icrn%ipos%i' % (id,crn,pos))
 
     #TODO: Constraints:
     
     #Each class must be smaller than cap size
-    #for each course
-        #num_students_in_class = sum(assignments[(id,crn,yr,pos)] for id in all students for pos in all_tree_pos)
-        #model.ADD(num_students_in_class <= courses[crn])
+    for crn in courses:
+        num_students_in_class = sum(assignments[(id,crn,pos)] for id in class_by_student for pos in all_tree_pos)
+        model.ADD(num_students_in_class <= courses[crn])
 
     #Each student must have four class or less
+    for id in class_by_student:
+        num_classes_per_student = sum(assignments[(id,crn,pos)] for crn in courses for pos in all_tree_pos)
+        model.ADD(num_classes_per_student<=4)
 
     #Constrain each of the scnearios (i.e can't have tree slot 1a and 1b at same time )
    #For the first three trees:
