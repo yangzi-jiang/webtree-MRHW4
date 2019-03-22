@@ -3,6 +3,7 @@ import csv
 import sys
 import random
 from student import Student
+from evaluate import Evaluate
 
 FIELDS = ['ID','CLASS','CRN','TREE','BRANCH','COURSE_CEILING',
           'MAJOR','MAJOR2','SUBJ','NUMB','SEQ']
@@ -178,6 +179,9 @@ def main():
         for course in assignments[id]:
             print course,
         print
+    
+    eval = Evaluate(assignments)
+    print(eval.value)
 
         
 if __name__ == "__main__":

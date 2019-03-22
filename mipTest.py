@@ -3,6 +3,7 @@ from ortools.linear_solver import pywraplp
 from student import Student
 import csv
 import sys
+import evaluate
 
 TOTAL_TREE_SPOTS = 25
 TREE_SIZE = 7
@@ -87,33 +88,43 @@ def get_tree_pos(tree,branch):
 
 def main():
   if (len(sys.argv) != 2):
-        print()
-        print("***********************************************************")
-        print("You need to supply a .csv file containing the WebTree data")
-        print("as a command-line argument.")
-        print
-        print ("Example:")
-        print ("    python baseline_webtree.py spring-2015.csv")
-        print ("***********************************************************")
-        print
-        return
+    print()
+    print("***********************************************************")
+    print("You need to supply a .csv file containing the WebTree data")
+    print("as a command-line argument.")
+    print
+    print ("Example:")
+    print ("    python baseline_webtree.py spring-2015.csv")
+    print ("***********************************************************")
+    print
+    return
   
   # Read in data
   student_requests, students_by_class, class_by_student, courses, student_pref = read_file(sys.argv[1])
-
-  num_students = len(class_by_student)
-  num_courses = len(courses)
   
   #Keep an ordered list of crns
   course_index = []
   for course in courses:
     course_index.append(course)
+  
+  #Sort the crns (may speed up the search?)
+  course_index.sort()
 
+  #Keep an ordered list of students
+  student_index = []
+  for student in student_requests:
+    student_index.append(student)
+
+  #Sort student ids (may speed up the search?)
+  student_index.sort()
+
+  num_students = len(student_index)
+  num_courses = len(course_index)
 
   solver = pywraplp.Solver('SolveAssignmentProblemMIP',
                            pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
 
-# Students are rows, courses are cols
+  # Students are rows, courses are cols
   courseValue = [
                 [[100, 0], [33, 2], [33, 3], [25, 4], [20, 6]],
                 [[100, 0], [50, 1], [33, 2], [25, 4], [20, 6]],
@@ -126,9 +137,20 @@ def main():
                 [[33, 2], [25, 9], [100, 0], [-1, -1], [20, 6]]
                 ]
 
-#   team1 = [0, 2, 4]
-#   team2 = [1, 3, 5]
-#   team_max = 2
+
+
+#build courseValue matrix
+  courseValue = []
+  for student in student_index:
+    requests = [-1]*num_courses
+    for pos in range(TOTAL_TREE_SPOTS):
+      request = student_pref[student][pos]
+      if request != 0:
+        index = course_index.index(request)
+        #if haven't already requested higher in trees
+        if requests[index] == -1:
+          requests[index] = WEIGHTS[pos]
+    courseValue.append(requests)
 
   num_students = len(courseValue)
   num_courses = len(courseValue[1])
@@ -139,45 +161,49 @@ def main():
       x[i, j] = solver.BoolVar('x[%i,%i]' % (i, j))
 
   # Objective - We want to maximize the total courseValue for all students
-  solver.Maximize(solver.Sum([courseValue[i][j][0] * x[i,j] for i in range(num_students)
-                                                  for j in range(num_courses)]))
+  solver.Maximize(solver.Sum(courseValue[i][j] * x[i,j] for i in range(num_students)
+                                                  for j in range(num_courses)))
 
   # Constraints
 
   # Constraint #1 (Done): Each student is assigned to at most 4 courses.
-  # Don't need to assign 4 courses for students who have filled out 4, and according
-  # Don't need to parse csv to from student to count how many course they have filled out.
   for i in range(num_students):
     solver.Add(solver.Sum([x[i, j] for j in range(num_courses)]) <= 4)
 
-  # Constraint #2: TODO: Each course is assigned to at most its cap
+  # Constraint #2: (Done): Each course is assigned to at most its cap
   for j in range(num_courses):
-    solver.Add(solver.Sum([x[i, j] for i in range(num_students)]) <= 2)
+    solver.Add(solver.Sum([x[i, j] for i in range(num_students)]) <= courses[course_index[j]])
 
   # Constraint #3: TODO: No duplicating crns
     # No courseID 1 for studentID
     solver.Add(x[4, 1] == False)
-    
-
-# # we don't need this
-# # Each team takes on two tasks.
-#   solver.Add(solver.Sum([x[i, j] for i in team1 for j in range(num_courses)]) <= team_max)
-#   solver.Add(solver.Sum([x[i, j] for i in team2 for j in range(num_courses)]) <= team_max)
 
   sol = solver.Solve()
 
   print('Total courseValue = ', solver.Objective().Value())
   print()
+  assignments = {}
 
+  for id in range(num_students):
+    assignments[student_index[id]] = []
+    
   totalCourseVal = 0
   for i in range(num_students):
     for j in range(num_courses):
       if x[i, j].solution_value() > 0:
-        totalCourseVal = totalCourseVal + courseValue[i][j][0]
-        print('StudentID %d assigned to cousrseID %d.  courseValue = %d' % (
-              i,
-              j,
-              courseValue[i][j][0]))
+        assignments[student_index[i]].append(course_index[j])
+        totalCourseVal = totalCourseVal + courseValue[i][j]
+        # print('StudentID %d assigned to cousrseID %d.  courseValue = %d' % (
+        #       student_index[i],
+        #       course_index[j],
+        #       courseValue[i][j]))
+  
+  # Print results to stdout
+  for id in assignments:
+    print(id, end=' '),
+    for course in assignments[id]:
+        print(course, end=' ')
+    print()
 
   print()
   print("Total Course Value for all student is %d " % totalCourseVal)
