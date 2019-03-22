@@ -180,8 +180,9 @@ def main():
             print course,
         print
     
-    eval = Evaluate(assignments)
-    print(eval.value)
+    eval = Evaluate(assignments,courses)
+    print(eval.FourCourses)
+    print(eval.overfill)
 
         
 if __name__ == "__main__":

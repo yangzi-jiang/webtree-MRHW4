@@ -3,7 +3,7 @@ from ortools.linear_solver import pywraplp
 from student import Student
 import csv
 import sys
-import evaluate
+from evaluate import Evaluate
 
 TOTAL_TREE_SPOTS = 25
 TREE_SIZE = 7
@@ -205,6 +205,9 @@ def main():
         print(course, end=' ')
     print()
 
+  eval = Evaluate(assignments,courses)
+  print(eval.FourCourses)
+  print(eval.overfill)
   print()
   print("Total Course Value for all student is %d " % totalCourseVal)
   print()
