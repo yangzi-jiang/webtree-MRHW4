@@ -5,6 +5,9 @@ import random
 from student import Student
 from evaluate import Evaluate
 
+TOTAL_TREE_SPOTS = 25
+TREE_SIZE = 7
+
 FIELDS = ['ID','CLASS','CRN','TREE','BRANCH','COURSE_CEILING',
           'MAJOR','MAJOR2','SUBJ','NUMB','SEQ']
 
@@ -30,6 +33,8 @@ def read_file(filename):
         courses = {}
         reader.next() # consume the first line, which is just column headers
 
+        student_pref = {}
+
         for row in reader:
             id = int(row['ID'])
             class_year = row['CLASS']
@@ -43,10 +48,31 @@ def read_file(filename):
                 s.add_request(crn, tree, branch)
                 student_requests[id] = s
 
+            #For building student requests as arrays
+            tree_pos = get_tree_pos(tree,branch)
+            if id in student_pref: # does this student already exist?
+                #Add the course request in the correct tree pos
+                student_pref[id][tree_pos] = crn
+            else: # nope, create a new record
+                pref = [0]*25
+                student_pref[id]=pref
+                student_pref[id][tree_pos] = crn
+
             students_by_class[class_year].add(id)
             courses[crn] = int(row['COURSE_CEILING'])
             
-    return student_requests, students_by_class, courses
+    return student_requests, students_by_class, courses, student_pref
+
+def get_tree_pos(tree,branch):
+    """
+    Returns a position 0-24 based on the tree/brach combination.
+
+    Tree positions are numbered sequentially by starting at tree1 and traversing level-order
+    """
+    if tree<=3:
+        return (TREE_SIZE*(tree-1))+(branch-1)
+    else:
+        return branch + 20
 
 
 def assign_random_numbers(students_by_class):
@@ -164,7 +190,7 @@ def main():
         return
     
     # Read in data
-    student_requests, students_by_class, courses = read_file(sys.argv[1])
+    student_requests, students_by_class, courses, student_pref = read_file(sys.argv[1])
 
     # Assign random numbers
     random_ordering = assign_random_numbers(students_by_class)
@@ -180,9 +206,10 @@ def main():
             print course,
         print
     
-    eval = Evaluate(assignments,courses)
+    eval = Evaluate(assignments,courses,student_pref)
     print(eval.FourCourses)
     print(eval.overfill)
+    print(eval.requestRatio)
 
         
 if __name__ == "__main__":

@@ -17,6 +17,9 @@ WEIGHTS = [40.0, 100.0/3.0, 200.0/7.0, 200.0/7.0, 25.0, 25.0, 200.0/9.0,
           200.0/7.0, 25.0, 200.0/9.0, 200.0/9.0, 20.0, 20.0, 200.0/11.0,
           50.0/3.0, 200.0/13.0, 100.0/7.0, 40.0/3.0]
 
+#These are weights for different class years
+SENIORITY = {'FRST':1.0,'SOPH':1.1,'JUNI':1.2,'SENI':1.3,'OTHER':1.0}
+
 def read_file(filename):
     """Returns data read in from supplied WebTree data file.
 
@@ -161,7 +164,7 @@ def main():
       x[i, j] = solver.BoolVar('x[%i,%i]' % (i, j))
 
   # Objective - We want to maximize the total courseValue for all students
-  solver.Maximize(solver.Sum(courseValue[i][j] * x[i,j] for i in range(num_students)
+  solver.Maximize(solver.Sum(courseValue[i][j] * SENIORITY[class_by_student[student_index[i]]] * x[i,j] for i in range(num_students)
                                                   for j in range(num_courses)))
 
   # Constraints
@@ -176,7 +179,7 @@ def main():
 
   # Constraint #3: TODO: No duplicating crns
     # No courseID 1 for studentID
-    solver.Add(x[4, 1] == False)
+    #solver.Add(x[4, 1] == False)
 
   sol = solver.Solve()
 
@@ -205,9 +208,10 @@ def main():
         print(course, end=' ')
     print()
 
-  eval = Evaluate(assignments,courses)
+  eval = Evaluate(assignments,courses,student_pref)
   print(eval.FourCourses)
   print(eval.overfill)
+  print(eval.requestRatio)
   print()
   print("Total Course Value for all student is %d " % totalCourseVal)
   print()
