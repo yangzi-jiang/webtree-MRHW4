@@ -16,6 +16,7 @@ WEIGHTS = [40.0, 100.0/3.0, 200.0/7.0, 200.0/7.0, 25.0, 25.0, 200.0/9.0,
           100.0/3.0, 200.0/7.0, 25.0, 25.0, 200.0/9.0, 200.0/9.0, 20.0,
           200.0/7.0, 25.0, 200.0/9.0, 200.0/9.0, 20.0, 20.0, 200.0/11.0,
           50.0/3.0, 200.0/13.0, 100.0/7.0, 40.0/3.0]
+    
 
 #These are weights for different class years
 SENIORITY = {'FRST':1.0,'SOPH':1.1,'JUNI':1.2,'SENI':1.3,'OTHER':1.0}
@@ -209,9 +210,11 @@ def main():
     print()
 
   eval = Evaluate(assignments,courses,student_pref)
-  print(eval.FourCourses)
+  print("Num Students with four courses: " + str(eval.FourCourses))
   print(eval.overfill)
-  print(eval.requestRatio)
+  print("Received per Request: " + str(eval.requestRatio))
+  print("Num First Choice: " + str(eval.firstChoice))
+  print("Num in First Tree: " + str(eval.firstTree))
   print()
   print("Total Course Value for all student is %d " % totalCourseVal)
   print()

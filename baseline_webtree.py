@@ -207,9 +207,11 @@ def main():
         print
     
     eval = Evaluate(assignments,courses,student_pref)
-    print(eval.FourCourses)
-    print(eval.overfill)
-    print(eval.requestRatio)
+    print("Num Students with four courses: " + str(eval.FourCourses))
+    #print(eval.overfill)
+    print("Received per Request: " +str(eval.requestRatio))
+    print("Number First Choice: " + str(eval.firstChoice))
+    print("Number in First Treee: " + str(eval.firstTree))
 
         
 if __name__ == "__main__":

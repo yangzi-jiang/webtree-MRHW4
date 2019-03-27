@@ -3,14 +3,15 @@ class Evaluate:
    
     def __init__(self, assignments, courses, student_requests):
         self.assignments = assignments
-        self.numFourCourses()
-        
         self.courses = courses
         self.overfill = []
-        self.verifyClassCap()
-
         self.requestRatio = 0
         self.requests = student_requests
+        self.firstChoice = 0
+        self.firstTree = 0
+
+        self.numFourCourses()
+        self.verifyClassCap()
         self.avgReceivedRequestedRatio()
         
    
@@ -35,6 +36,14 @@ class Evaluate:
 
         for i in self.assignments:
             for crn in self.assignments[i]:
+
+                #Also check if it's first choice
+                if crn == self.requests[i][0]:
+                    self.firstChoice +=1
+                
+                if self.requests[i].index(crn) <7:
+                    self.firstTree +=1
+
                 if crn in students_in_course:
                     students_in_course[crn]+= 1
                 else:
@@ -58,6 +67,11 @@ class Evaluate:
             ratio = float(len(self.assignments[student]))/float(ctr)
             totalRatio+=ratio
         self.requestRatio = totalRatio/len(self.assignments)
+
+    # def scoreTree(self):
+    #     totalScore = 0
+    #     for student in self.requests:
+    #         stuScore = 
 
 
 
