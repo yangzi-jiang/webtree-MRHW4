@@ -16,6 +16,9 @@ WEIGHTS = [40.0, 100.0/3.0, 200.0/7.0, 200.0/7.0, 25.0, 25.0, 200.0/9.0,
           100.0/3.0, 200.0/7.0, 25.0, 25.0, 200.0/9.0, 200.0/9.0, 20.0,
           200.0/7.0, 25.0, 200.0/9.0, 200.0/9.0, 20.0, 20.0, 200.0/11.0,
           50.0/3.0, 200.0/13.0, 100.0/7.0, 40.0/3.0]
+
+#Coefficient for weighting classes in students major
+MAJOR_WEIGHT = 1.2
     
 
 #These are weights for different class years
@@ -42,8 +45,9 @@ def read_file(filename):
                              'OTHER': set([])}
         class_by_student = {}
         courses = {}
-        
+        major_by_student = {}
         student_pref = {}
+        course_subj = {}
 
         reader.next() # consume the first line, which is just column headers
 
@@ -57,6 +61,15 @@ def read_file(filename):
             branch = int(row['BRANCH'])
 
             class_by_student[id]=class_year
+            
+            #Read in the major(s)
+            majors = []
+            majors.append(row['MAJOR'])
+            majors.append(row['MAJOR2'])
+            major_by_student[id] = majors
+
+            course_subj[crn] = row['SUBJ']
+
             if id in student_requests: # does this student already exist?
                 student_requests[id].add_request(crn, tree, branch)
             else: # nope, create a new record
@@ -77,7 +90,7 @@ def read_file(filename):
             students_by_class[class_year].add(id)
             courses[crn] = int(row['COURSE_CEILING'])
             
-    return student_requests, students_by_class,class_by_student, courses, student_pref
+    return student_requests, students_by_class,class_by_student, courses, student_pref, major_by_student, course_subj
 
 def get_tree_pos(tree,branch):
     """
@@ -104,7 +117,7 @@ def main():
     return
   
   # Read in data
-  student_requests, students_by_class, class_by_student, courses, student_pref = read_file(sys.argv[1])
+  student_requests, students_by_class, class_by_student, courses, student_pref, major_by_student, course_subj = read_file(sys.argv[1])
   
   #Keep an ordered list of crns
   course_index = []
@@ -129,17 +142,17 @@ def main():
                            pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
 
   # Students are rows, courses are cols
-  courseValue = [
-                [[100, 0], [33, 2], [33, 3], [25, 4], [20, 6]],
-                [[100, 0], [50, 1], [33, 2], [25, 4], [20, 6]],
-                [[33, 2], [100, 0], [50, 7], [25, 4], [20, 6]],
-                [[100, 0], [-1, -1], [33, 3], [-1, -1], [20, 6]], 
-                # If a student filled fewer than 4 courses in the webtree, set it to -1, 
-                # so that we don't assign that course
-                # Similarily, for the course student did not fill in webtree, set it to -1
-                [[-1, -1], [100, 0], [50, 7], [25, 9], [20, 6]],
-                [[33, 2], [25, 9], [100, 0], [-1, -1], [20, 6]]
-                ]
+  # courseValue = [
+  #               [[100, 0], [33, 2], [33, 3], [25, 4], [20, 6]],
+  #               [[100, 0], [50, 1], [33, 2], [25, 4], [20, 6]],
+  #               [[33, 2], [100, 0], [50, 7], [25, 4], [20, 6]],
+  #               [[100, 0], [-1, -1], [33, 3], [-1, -1], [20, 6]], 
+  #               # If a student filled fewer than 4 courses in the webtree, set it to -1, 
+  #               # so that we don't assign that course
+  #               # Similarily, for the course student did not fill in webtree, set it to -1
+  #               [[-1, -1], [100, 0], [50, 7], [25, 9], [20, 6]],
+  #               [[33, 2], [25, 9], [100, 0], [-1, -1], [20, 6]]
+  #               ]
 
 
 
@@ -153,7 +166,12 @@ def main():
         index = course_index.index(request)
         #if haven't already requested higher in trees
         if requests[index] == -1:
-          requests[index] = WEIGHTS[pos]
+          #Check if course is in major
+          for i in range(len(major_by_student[student])):
+            if course_subj[request] == major_by_student[student][i]:
+              requests[index] = WEIGHTS[pos]*MAJOR_WEIGHT
+            else:
+              requests[index] = WEIGHTS[pos]
     courseValue.append(requests)
 
   num_students = len(courseValue)
