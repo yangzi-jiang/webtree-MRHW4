@@ -17,9 +17,9 @@ WEIGHTS = [40.0, 100.0/3.0, 200.0/7.0, 200.0/7.0, 25.0, 25.0, 200.0/9.0,
           200.0/7.0, 25.0, 200.0/9.0, 200.0/9.0, 20.0, 20.0, 200.0/11.0,
           50.0/3.0, 200.0/13.0, 100.0/7.0, 40.0/3.0]
 
+
 #Coefficient for weighting classes in students major
 MAJOR_WEIGHT = 1.2
-    
 
 #These are weights for different class years
 SENIORITY = {'FRST':1.0,'SOPH':1.1,'JUNI':1.2,'SENI':1.3,'OTHER':1.0}
@@ -154,8 +154,6 @@ def main():
   #               [[33, 2], [25, 9], [100, 0], [-1, -1], [20, 6]]
   #               ]
 
-
-
 #build courseValue matrix
   courseValue = []
   for student in student_index:
@@ -176,6 +174,7 @@ def main():
 
   num_students = len(courseValue)
   num_courses = len(courseValue[1])
+
   x = {}
 
   for i in range(num_students):
@@ -187,18 +186,15 @@ def main():
                                                   for j in range(num_courses)))
 
   # Constraints
-
   # Constraint #1 (Done): Each student is assigned to at most 4 courses.
   for i in range(num_students):
     solver.Add(solver.Sum([x[i, j] for j in range(num_courses)]) <= 4)
 
-  # Constraint #2: (Done): Each course is assigned to at most its cap
+  # Constraint #2 (Done): Each course is assigned to at most its cap
   for j in range(num_courses):
     solver.Add(solver.Sum([x[i, j] for i in range(num_students)]) <= courses[course_index[j]])
 
-  # Constraint #3: TODO: No duplicating crns
-    # No courseID 1 for studentID
-    #solver.Add(x[4, 1] == False)
+  # Constraint #3 (Done): No duplicating crns assignments
 
   sol = solver.Solve()
 
@@ -209,7 +205,7 @@ def main():
   for id in range(num_students):
     assignments[student_index[id]] = []
     
-  totalCourseVal = 0
+  totalCourseVal = 0.0
   for i in range(num_students):
     for j in range(num_courses):
       if x[i, j].solution_value() > 0:

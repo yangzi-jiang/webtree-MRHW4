@@ -11,6 +11,19 @@ TREE_SIZE = 7
 FIELDS = ['ID','CLASS','CRN','TREE','BRANCH','COURSE_CEILING',
           'MAJOR','MAJOR2','SUBJ','NUMB','SEQ']
 
+# There are 11 distinct course values for a webtree.
+# Weights are assigned by y= 200/ (x + 4)
+WEIGHTS = [40.0, 100.0/3.0, 200.0/7.0, 200.0/7.0, 25.0, 25.0, 200.0/9.0,
+          100.0/3.0, 200.0/7.0, 25.0, 25.0, 200.0/9.0, 200.0/9.0, 20.0,
+          200.0/7.0, 25.0, 200.0/9.0, 200.0/9.0, 20.0, 20.0, 200.0/11.0,
+          50.0/3.0, 200.0/13.0, 100.0/7.0, 40.0/3.0]
+
+#Coefficient for weighting classes in students major
+MAJOR_WEIGHT = 1.2
+
+#These are weights for different class years
+SENIORITY = {'FRST':1.0,'SOPH':1.1,'JUNI':1.2,'SENI':1.3,'OTHER':1.0}
+
 def read_file(filename):
     """Returns data read in from supplied WebTree data file.
 
@@ -31,23 +44,42 @@ def read_file(filename):
                              'SOPH': set([]), 'FRST': set([]),
                              'OTHER': set([])}
         courses = {}
-        reader.next() # consume the first line, which is just column headers
 
+        class_by_student = {}
+        courses = {}
+        major_by_student = {}
         student_pref = {}
+        course_subj = {}
+
+        #reader.next
+        next(reader) # consume the first line, which is just column headers
 
         for row in reader:
+
             id = int(row['ID'])
+            
             class_year = row['CLASS']
             crn = int(row['CRN'])
             tree = int(row['TREE'])
             branch = int(row['BRANCH'])
+
+            class_by_student[id]=class_year
+            
+            #Read in the major(s)
+            majors = []
+            majors.append(row['MAJOR'])
+            majors.append(row['MAJOR2'])
+            major_by_student[id] = majors
+
+            course_subj[crn] = row['SUBJ']
+
             if id in student_requests: # does this student already exist?
                 student_requests[id].add_request(crn, tree, branch)
             else: # nope, create a new record
                 s = Student(id, class_year)
                 s.add_request(crn, tree, branch)
                 student_requests[id] = s
-
+            
             #For building student requests as arrays
             tree_pos = get_tree_pos(tree,branch)
             if id in student_pref: # does this student already exist?
@@ -61,7 +93,7 @@ def read_file(filename):
             students_by_class[class_year].add(id)
             courses[crn] = int(row['COURSE_CEILING'])
             
-    return student_requests, students_by_class, courses, student_pref
+    return student_requests, students_by_class, class_by_student, courses, student_pref, major_by_student, course_subj
 
 def get_tree_pos(tree,branch):
     """
@@ -131,7 +163,7 @@ def assign_student(student, courses):
             if (courses[requested_course] > 0): # there is space!
                 courses[requested_course] -= 1
                 student.advance_preference(True)
-                return requested_course
+                return requested_course#, tree_pos
         except KeyError: # student didn't fill in preference, continue
             pass
         
@@ -167,6 +199,7 @@ def run_webtree(student_requests, students_by_class, courses, random_ordering):
                 course = assign_student(student_requests[student_id], courses)
                 if course != None:
                     assignments[student_id].append(course)
+                    # calculate weights here?
 
     # Note: apparently, WebTree does a second pass at this point to "fill out"
     # student schedules further (especially those who received fewer than 4
@@ -178,19 +211,19 @@ def run_webtree(student_requests, students_by_class, courses, random_ordering):
 
 def main():
     if (len(sys.argv) != 2):
-        print
-        print "***********************************************************"
-        print "You need to supply a .csv file containing the WebTree data"
-        print "as a command-line argument."
-        print
-        print "Example:"
-        print "    python baseline_webtree.py spring-2015.csv"
-        print "***********************************************************"
-        print
+        print ()
+        print ("***********************************************************")
+        print ("You need to supply a .csv file containing the WebTree data")
+        print ("as a command-line argument.")
+        print ()
+        print ("Example:")
+        print ("    python baseline_webtree.py spring-2015.csv")
+        print ("***********************************************************")
+        print ()
         return
     
     # Read in data
-    student_requests, students_by_class, courses, student_pref = read_file(sys.argv[1])
+    student_requests, students_by_class, class_by_student, courses, student_pref, major_by_student, course_subj = read_file(sys.argv[1])
 
     # Assign random numbers
     random_ordering = assign_random_numbers(students_by_class)
@@ -200,13 +233,21 @@ def main():
                               courses, random_ordering)
 
     # Print results to stdout
+    # calculate weights here?
+    total_values = 0.0
     for id in assignments:
-        print id,
+        print (id)
         for course in assignments[id]:
-            print course,
-        print
+            print (course)
+            current_value = WEIGHTS[student_pref[id].index(course)] * SENIORITY[class_by_student[id]]
+            for i in range(len(major_by_student[id])):
+                if course_subj[course] == major_by_student[id][i]:
+                    current_value = current_value * MAJOR_WEIGHT
+            total_values = total_values + current_value 
+        print ()
+    print ("Total Course Values: " + str(total_values))
     
-    eval = Evaluate(assignments,courses,student_pref)
+    eval = Evaluate(assignments, courses, student_pref)
     print("Num Students with four courses: " + str(eval.FourCourses))
     #print(eval.overfill)
     print("Received per Request: " +str(eval.requestRatio))
