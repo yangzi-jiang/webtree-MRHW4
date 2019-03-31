@@ -11,12 +11,17 @@ FIELDS = ['ID','CLASS','CRN','TREE','BRANCH','COURSE_CEILING',
           'MAJOR','MAJOR2','SUBJ','NUMB','SEQ']
 
 # There are 11 distinct course values for a webtree.
-# Weights are assigned by y= 200/ (x + 4)
+# Weights are assigned by y= 200/ (index + 5)
 WEIGHTS = [40.0, 100.0/3.0, 200.0/7.0, 200.0/7.0, 25.0, 25.0, 200.0/9.0,
           100.0/3.0, 200.0/7.0, 25.0, 25.0, 200.0/9.0, 200.0/9.0, 20.0,
           200.0/7.0, 25.0, 200.0/9.0, 200.0/9.0, 20.0, 20.0, 200.0/11.0,
           50.0/3.0, 200.0/13.0, 100.0/7.0, 40.0/3.0]
 
+# Weights2 are assigned by y= 200/ (index + 2)
+WEIGHTS2 = [200.0/2.0, 200.0/3.0, 200.0/4.0, 200.0/4.0, 200.0/5.0, 200.0/5.0, 200.0/6.0,
+          200.0/3.0, 200.0/4.0, 200.0/5.0, 200.0/5.0, 200.0/6.0, 200.0/6.0, 200.0/7.0,
+          200.0/4.0, 200.0/5.0, 200.0/6.0, 200.0/6.0, 200.0/7.0, 200.0/7.0, 200.0/8.0,
+          200.0/9.0, 200.0/10.0, 200.0/11.0, 200.0/12.0]
 
 #Coefficient for weighting classes in students major
 MAJOR_WEIGHT = 1.2
@@ -168,8 +173,11 @@ def main():
           for i in range(len(major_by_student[student])):
             if course_subj[request] == major_by_student[student][i]:
               requests[index] = WEIGHTS[pos]*MAJOR_WEIGHT
+              #requests[index] = WEIGHTS2[pos]*MAJOR_WEIGHT
             else:
               requests[index] = WEIGHTS[pos]
+              #requests[index] = WEIGHTS2[pos]
+              
     courseValue.append(requests)
 
   num_students = len(courseValue)
